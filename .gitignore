@@ -1,0 +1,14 @@
+# Credenciais: nunca vão para o GitHub
+.env
+
+# Arquivos do DuckDB: são dado, não código
+data/
+*.duckdb
+*.duckdb.wal
+
+# Ambiente virtual criado pelo uv
+.venv/
+
+# Arquivos temporários do Python e do pytest
+__pycache__/
+.pytest_cache/
