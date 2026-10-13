@@ -1,0 +1,21 @@
+# Roda os testes automaticamente a cada git push.
+name: Testes
+
+on:
+  push:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      # Baixa o código do repositório para a máquina do GitHub
+      - uses: actions/checkout@v4
+
+      # Instala o uv
+      - uses: astral-sh/setup-uv@v6
+
+      # Instala o Python do .python-version e as versões exatas do uv.lock
+      - run: uv sync --locked
+
+      # Roda os testes
+      - run: uv run pytest
