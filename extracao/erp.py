@@ -23,3 +23,27 @@ def connect_to_erp() -> psycopg.Connection:
         password=get_env("ERP_DB_PASSWORD"),
         sslmode="require",
     )
+
+
+def fetch_columns(
+    connection: psycopg.Connection, table: str
+) -> list[tuple[str, str, int | None, int | None]]:
+    """Lê no catálogo do PostgreSQL as colunas de uma tabela do ERP, na ordem da origem.
+
+    Cada coluna vem como (nome, tipo, precisão, escala). Precisão e escala só existem
+    para números (ex.: numeric(10, 2)); nos outros tipos, vêm como None.
+    """
+    query = """
+        SELECT column_name, data_type, numeric_precision, numeric_scale
+        FROM information_schema.columns
+        WHERE table_schema = 'erp_postgresql'
+          AND table_name = %s
+        ORDER BY ordinal_position
+    """
+    columns = connection.execute(query, (table,)).fetchall()
+    if not columns:
+        raise RuntimeError(
+            f"Nenhuma coluna encontrada para erp_postgresql.{table}. "
+            "Confira o nome da tabela e se o script sql/erp_reader.sql foi rodado após a última recarga da base."
+        )
+    return columns
