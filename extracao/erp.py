@@ -2,6 +2,14 @@ import os
 
 import psycopg
 from dotenv import load_dotenv
+from psycopg import sql
+
+# Chave primária de cada tabela do ERP: as linhas são lidas sempre nessa ordem.
+ERP_PRIMARY_KEYS = {
+    "products": "product_id",
+    "sales": "sale_id",
+    "sale_items": "sale_item_id",
+}
 
 
 def get_env(name: str) -> str:
@@ -47,3 +55,15 @@ def fetch_columns(
             "Confira o nome da tabela e se o script sql/erp_reader.sql foi rodado após a última recarga da base."
         )
     return columns
+
+
+def fetch_rows(connection: psycopg.Connection, table: str) -> list[tuple]:
+    """Lê todas as linhas de uma tabela do ERP, ordenadas pela chave primária.
+
+    As colunas vêm na ordem da origem, a mesma devolvida por fetch_columns.
+    """
+    query = sql.SQL("SELECT * FROM {table} ORDER BY {primary_key}").format(
+        table=sql.Identifier("erp_postgresql", table),
+        primary_key=sql.Identifier(ERP_PRIMARY_KEYS[table]),
+    )
+    return connection.execute(query).fetchall()
