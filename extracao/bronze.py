@@ -1,6 +1,7 @@
 """Gravação na camada bronze do DuckDB."""
 
 from datetime import datetime
+from pathlib import Path
 
 import duckdb
 
@@ -27,6 +28,17 @@ def to_duckdb_type(data_type: str, precision: int | None, scale: int | None) -> 
     if data_type not in POSTGRES_TO_DUCKDB_TYPES:
         raise ValueError(f"Tipo do PostgreSQL sem equivalente definido no pipeline: {data_type}")
     return POSTGRES_TO_DUCKDB_TYPES[data_type]
+
+
+def connect_to_duckdb(path: str) -> duckdb.DuckDBPyConnection:
+    """Abre o arquivo do DuckDB, criando a pasta dele se ainda não existir."""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    return duckdb.connect(path)
+
+
+def count_bronze_rows(connection: duckdb.DuckDBPyConnection, bronze_table: str) -> int:
+    """Conta as linhas de uma tabela do schema bronze."""
+    return connection.execute(f"SELECT count(*) FROM bronze.{quote_identifier(bronze_table)}").fetchone()[0]
 
 
 def quote_identifier(name: str) -> str:

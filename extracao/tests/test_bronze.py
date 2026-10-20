@@ -8,11 +8,12 @@ ao Python exigiria a biblioteca pytz, que o pipeline não usa.
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import duckdb
 import pytest
 
-from extracao.bronze import to_duckdb_type, write_table
+from extracao.bronze import connect_to_duckdb, count_bronze_rows, to_duckdb_type, write_table
 
 # Uma tabela pequena, no formato que o fetch_columns e o fetch_rows devolvem.
 COLUMNS = [
@@ -38,11 +39,6 @@ def connection() -> Iterator[duckdb.DuckDBPyConnection]:
         yield connection
     finally:
         connection.close()
-
-
-def count_rows(connection: duckdb.DuckDBPyConnection) -> int:
-    """Conta as linhas de bronze.erp_products."""
-    return connection.execute("SELECT count(*) FROM bronze.erp_products").fetchone()[0]
 
 
 @pytest.mark.parametrize(
@@ -125,7 +121,7 @@ def test_write_table_twice_does_not_duplicate(connection: duckdb.DuckDBPyConnect
     """Gravar duas vezes substitui a tabela: as linhas não se repetem."""
     write_table(connection, "erp_products", COLUMNS, ROWS, EXTRACTED_AT)
     write_table(connection, "erp_products", COLUMNS, ROWS, EXTRACTED_AT)
-    assert count_rows(connection) == len(ROWS)
+    assert count_bronze_rows(connection, "erp_products") == len(ROWS)
 
 
 def test_write_table_failure_keeps_previous_table(connection: duckdb.DuckDBPyConnection) -> None:
@@ -134,10 +130,18 @@ def test_write_table_failure_keeps_previous_table(connection: duckdb.DuckDBPyCon
     broken_rows = [(3, "Linha com colunas faltando")]
     with pytest.raises(duckdb.Error):
         write_table(connection, "erp_products", COLUMNS, broken_rows, EXTRACTED_AT)
-    assert count_rows(connection) == len(ROWS)
+    assert count_bronze_rows(connection, "erp_products") == len(ROWS)
 
 
 def test_write_table_without_rows_creates_empty_table(connection: duckdb.DuckDBPyConnection) -> None:
     """Sem linhas, a tabela é criada vazia, com a estrutura certa."""
     write_table(connection, "erp_products", COLUMNS, [], EXTRACTED_AT)
-    assert count_rows(connection) == 0
+    assert count_bronze_rows(connection, "erp_products") == 0
+
+
+def test_connect_to_duckdb_creates_missing_folder(tmp_path: Path) -> None:
+    """Se a pasta do arquivo ainda não existe, ela é criada."""
+    duckdb_path = tmp_path / "data" / "pipeline.duckdb"
+    with connect_to_duckdb(str(duckdb_path)) as connection:
+        connection.execute("SELECT 1")
+    assert duckdb_path.exists()
