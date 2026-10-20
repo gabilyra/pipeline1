@@ -17,5 +17,5 @@ jobs:
       # Instala o Python do .python-version e as versões exatas do uv.lock
       - run: uv sync --locked
 
-      # Roda os testes
-      - run: uv run pytest
+      # Roda os testes, menos os de integração (o GitHub não tem o .env)
+      - run: uv run pytest -m "not integration"
