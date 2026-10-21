@@ -6,9 +6,7 @@ Como rodar: uv run python -m extracao.check_connection
 import psycopg
 from psycopg import sql
 
-from extracao.erp import connect_to_erp
-
-ERP_TABLES = ["products", "sales", "sale_items"]
+from extracao.erp import ERP_PRIMARY_KEYS, connect_to_erp
 
 
 def fetch_current_user(connection: psycopg.Connection) -> str:
@@ -26,7 +24,7 @@ def main() -> None:
     """Conecta ao ERP e mostra o usuário e a contagem de cada tabela."""
     with connect_to_erp() as connection:
         print(f"Conectado como: {fetch_current_user(connection)}")
-        for table in ERP_TABLES:
+        for table in ERP_PRIMARY_KEYS:
             print(f"erp_postgresql.{table}: {count_rows(connection, table)} linhas")
 
 
